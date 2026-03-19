@@ -1,0 +1,34 @@
+#commands for mapping with bwa using GNU parallel
+
+conda activate baseclone
+
+#in screen, paste in the function
+birdMapping() {
+FASTQ=$1
+SM=$2
+PREFIX=$3
+FQDIR=/home/centos/USS/chris/alala/output/data_processing/01_TrimReads
+OUTDIR=/home/centos/USS/chris/alala/output/data_processing/02_bwamem
+
+bwa mem -t 6 -M -R "@RG\tID:${SM}\tSM:${SM}\tLB:${FASTQ}\tPL:Illumina\t" \
+/home/centos/USS/chris/alala/reference_genome/GCF_020740725.1_bCorHaw1.pri.cur_genomic.fna \
+${FQDIR}/${FASTQ}_R1_combined.fq.gz \
+${FQDIR}/${FASTQ}_R2_combined.fq.gz | \
+samtools view -@ 6 -bS -o ${OUTDIR}/${PREFIX}_bwamem.bam - \
+>& logfiles/${FASTQ}.nohup
+}
+
+
+
+#export the function
+export -f birdMapping
+
+#Launch in parallel. Each job takes at least 6 CPU, but I'd plan on each job using 8 since the function pipes into samtools.
+#j=the maximum number of jobs to run simultaneously
+#colsep= the input file has input variable separated by tabs
+#test_in.txt is a tab-delimited file, one line per sample listing the fastq basename, sample same I want in the bam header, and prefix for the output file
+
+parallel --colsep '\t' -j 8 birdMapping :::: /home/centos/USS/chris/alala/scripts/data_processing/02_bwamem/alala_samps.txt
+
+#the output is an unsorted bam of mapped reads
+

@@ -1,0 +1,53 @@
+conda activate java8
+
+GATK_filter() {
+
+CHROM=$1
+
+ROUND=1
+INDIR=/home/centos/USS/chris/alala/output/data_processing/06_TrimAlternates_VariantAnnotator
+OUTDIR=/home/centos/USS/chris/alala/output/data_processing/07_FilterVCFfile
+MASK=/home/centos/USS/chris/alala/reference_genome/GCF_020740725.1_bCorHaw1.pri.cur_genomic_repeats_TRF_WMdust.bed
+REFERENCE=/home/centos/USS/chris/alala/reference_genome/GCF_020740725.1_bCorHaw1.pri.cur_genomic.fna
+GATK=~/USS/conservation-genetics/nwr/bin/GenomeAnalysisTK.jar
+BED=/home/centos/USS/chris/alala/reference_genome/scaffold_files/scaffold_${CHROM}.bed
+
+
+
+### A. Apply mask and hard filters with VariantFiltration
+
+
+INFILE=${INDIR}/175AL_noFilter_VariantAnnotator_chrom${CHROM}.vcf.gz
+OUTFILE=${OUTDIR}/175AL_FilterA_Round${ROUND}_chrom${CHROM}.vcf.gz
+
+java -jar ${GATK} \
+-T VariantFiltration \
+-R ${REFERENCE} \
+--logging_level ERROR \
+--mask ${MASK} --maskName "FAIL_Rep" \
+-filter "DP >5211 " --filterName "FAIL_DP" \
+-L ${BED} \
+-V ${INFILE} \
+-o ${OUTFILE}
+
+wait
+
+### B. Apply custom site- and genotype-level filters
+
+FILTER_SCRIPT=/home/centos/USS/chris/alala/scripts/data_processing/07_FilterVCFfile/custom_filtering_alala.py
+
+INFILE2=${OUTDIR}/175AL_FilterA_Round${ROUND}_chrom${CHROM}.vcf.gz
+OUTFILE2=${OUTDIR}/175AL_FilterB_Round${ROUND}_chrom${CHROM}.vcf.gz
+
+set -o pipefail
+
+python ${FILTER_SCRIPT} ${INFILE2} | bgzip > ${OUTFILE2}
+
+tabix -p vcf ${OUTFILE2}
+
+}
+
+#export the function
+export -f GATK_filter
+
+seq 43 | parallel -j 12 GATK_filter

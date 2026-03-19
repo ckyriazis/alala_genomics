@@ -1,0 +1,19 @@
+
+
+conda activate baseclone
+
+cd /home/centos/USS/chris/alala/data/
+
+
+trim_reads() {
+
+FASTQID=$1 # full path to fastq files using basename only (without _R1_001.fastq.gz)
+
+trim_galore -j 2 --paired --fastqc $FASTQID'_R1_001.fastq.gz' $FASTQID'_R2_001.fastq.gz'
+
+}
+export -f trim_reads
+
+cat /home/centos/USS/chris/alala/scripts/data_processing/01_TrimReads/fastqfiles_basename_alalaRun1.txt | parallel -j 12 trim_reads >& trim_reads.nohup
+
+

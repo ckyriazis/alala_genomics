@@ -1,0 +1,364 @@
+initialize() {
+	initializeSLiMModelType("nonWF");
+	initializeSLiMOptions(keepPedigrees = T);
+	defineConstant("K1", 83000); //ancestral carrying capacity
+	defineConstant("K2", 130); //carrying capacity of captive population
+	defineConstant("sampleSize", 100); //for sampling the pop for summary stats
+	defineConstant("minRepAge", 2);
+	defineConstant("maxRepAge", 18);
+	defineConstant("burnin",20000);
+	initializeSex("A");
+	
+	// age-dependent increases in mortality
+	defineConstant("L", c(0.05, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+		0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+		0.05, 0.1, 0.25, 0.5, 0.75, 1.0));
+	
+	// only simulate deleterious mutations
+	initializeMutationRate(5e-9*2.31/3.31);
+	
+	// set dominance coefficients for different deleterious mutation types
+	defineConstant("h_wkDel", 0.45);
+	defineConstant("h_modDel", 0.2);
+	defineConstant("h_strDel", 0.05);
+	defineConstant("h_semiLet", 0.0);
+	defineConstant("h_let", 0.0);
+	
+	// set up discrete DFE with four mutation types coming from gamma DFE
+	// augmented with recessive lethals
+	// this approach for implementing an h-s relationship is much faster than using fitness callbacks in SLiM (see manual)
+	initializeMutationType("m1", h_wkDel, "s", "do x=rgamma(1,-0.01314833,0.186); while (x < -0.001); return x;");
+	initializeMutationType("m2", h_modDel, "s", "do x=rgamma(1,-0.01314833,0.186); while (x < -0.01 | x >= -0.001); return x;");
+	initializeMutationType("m3", h_strDel, "s", "do x=rgamma(1,-0.01314833,0.186); while (x < -0.1 | x >= -0.01); return x;");
+	initializeMutationType("m4", h_semiLet, "s", "do x=rgamma(1,-0.01314833,0.186); while (x >= -0.1); return x;");
+	initializeMutationType("m5", h_let,"f", -1.0);
+	initializeMutationType("m6", 0.5,"f", 0.0);
+	initializeMutationType("m7", 0.5,"f", 0.0);
+	
+	// proportion of new deleterious mutations that are recessive lethal
+	defineConstant("let_frac", 0.005);
+	
+	// set proportion of each mutation type as determined by Kim 2017 DFE augmented with lethals
+	initializeGenomicElementType("g1", c(m1,m2,m3,m4,m5), c(0.491*(1-let_frac), 0.247*(1-let_frac), 0.236*(1-let_frac), 0.026*(1-let_frac), let_frac));
+	
+	//initializeGenomicElementType("g1", c(m6), c(1.0));
+	
+	//number of genes on each autosomes
+	gene_vec=rep(500,40);
+	
+	//length of each gene
+	geneLength=2000;
+	
+	defineConstant("seqLength", sum(gene_vec)*geneLength);
+	
+	gene_num=sum(gene_vec);
+	
+	for (i in 1:gene_num){
+		initializeGenomicElement(g1, ((i-1)*geneLength)+(i-1), (i*geneLength)+(i-2) );
+	}
+	
+	rates=NULL;
+	
+	//assume no recombination within genes, a rate of 1e-6 between genes, and free recombination between chroms
+	for (i in 1:(size(gene_vec)-1)){
+		rates=c(rates, 0, rep(c(1e-6, 0), asInteger(gene_vec[i-1]-1)), 0.5);
+	}
+	rates=c(rates, 0, rep(c(1e-6, 0), asInteger(gene_vec[size(gene_vec)-1]-1)));
+	
+	ends=NULL;
+	for (i in 1:gene_num){
+		ends=c(ends, (i*geneLength)+(i-2), (i*geneLength)+(i-1));
+	}
+	ends=ends[0:(size(ends)-2)];
+	
+	initializeRecombinationRate(rates, ends);
+
+}
+
+reproduction() {
+	
+	for(pop in sim.subpopulations){
+		
+		males = pop.individuals[pop.individuals.sex=='M'];
+		females = pop.individuals[pop.individuals.sex=='F'];
+		
+		//get reproductive age males and females
+		repro_females = females[females.age >= minRepAge & females.age <= maxRepAge];
+		repro_males = males[males.age >= minRepAge & males.age <= maxRepAge];
+		
+		//loop through females and reproduce
+		//with one randomly selected male
+		for(mom in repro_females){
+			
+			// get fitness of mom and use to weight probability of reproduction
+			// i.e., if fitness is 0.95, reproduction will be successful 95% of time
+			// but if its 0.9 it will be successful 90% of time	
+			mom_fitness = pop.cachedFitness(mom.index)/pop.individuals.tagF[mom.index];
+			if(runif(1)>mom_fitness){
+				next;
+			}
+			
+			if(repro_males.size() > 0){
+				// allow all repr females to mate
+				//probability of actually reproducing determined by p_repr
+				dad = sample(repro_males,1);
+				dad_fitness = pop.cachedFitness(dad.index)/pop.individuals.tagF[dad.index];
+				if(runif(1)>dad_fitness){
+					next;
+				}
+				
+				size = 0.76; // controls dispersion - larger is less dispersion
+				prob = size / (size + 0.66*dad_fitness*mom_fitness); // mean is 0.66 
+				clutchSize = rnbinom(1, size, prob);
+				
+				for (j in seqLen(clutchSize)){
+					child = pop.addCrossed(mom, dad);
+				
+				}
+			
+			}
+		}
+	}
+	self.active = 0;
+}
+
+
+1 early() {
+	sim.readFromPopulationFile("/u/home/c/ckyriazi/project-klohmuel/alala_sims/scripts/alala_N2000_020626.txt");
+	cat("gen,popSizep1,meanFitnessp1,meanHetp1,B_yearp1,B_genp1,FROH_1Mbp1,maxLetp1,popSizep2,meanFitnessp2,meanHetp2,B_yearp2,B_genp2,FROH_1Mbp2,maxLetp2" + "\n");
+	//sim.addSubpop("p1", K1);
+	//sim.addSubpop("p2", 0);
+	//p1.individuals.age = rdunif(K1, min=0, max=10);
+	//defineConstant("simID", getSeed());
+	//use sim.tag to keep track of the years during which the breeding population was founded
+	sim.tag=1973;
+}
+
+// print generation time and ages
+100 early() {
+	//catn(p1.individuals.age);
+	females = p1.individuals[p1.individuals.sex=='F'];
+	males = p1.individuals[p1.individuals.sex=='M'];
+	
+	//get reproductive age males and females
+	repro_females = females[females.age >= minRepAge & females.age <=maxRepAge];
+	repro_males = males[males.age >= minRepAge & males.age <=maxRepAge];
+	
+	
+	// print generation time
+	//catn(mean(c(repro_females.age,repro_males.age)));
+}
+
+
+// fitness scaling
+early() {
+	
+	//use life table to enforce age-specific mortality 
+	inds = sim.subpopulations.individuals;
+	mortality = L[inds.age];
+	survival = 1 - mortality;
+	inds.fitnessScaling = survival;
+	
+	//initiate decline for wild population (p1)
+	if(sim.cycle > burnin){
+		mortalityRate = 0.17;
+		if(p1.individualCount<300){
+			mortalityRate = 0.23;
+		}
+                if(sim.tag>2025){
+                        mortalityRate = 0.1;
+                }
+		p1_inds = p1.individuals;
+		for(i in p1_inds){
+			if(runif(1) < mortalityRate){
+				i.fitnessScaling = 0.0;
+			}
+		}
+	}
+	
+	//start captive population once wild population declines below 150
+	// see Hedrick 2016 for an overview of the genetic founders
+	if(p1.individualCount<150 | sim.tag>2010){
+		
+		if(sim.tag==1973){
+			//sim.outputFull("/u/home/c/ckyriazi/project-klohmuel/alala_sims/scripts/alala_postBott_020626.txt");
+			founder1 = sample(p1.individuals[p1.individuals.age<2 & p1.individuals.sex=='M'], 1);
+			p2.takeMigrants(founder1);
+		}
+		if(sim.tag==1974){
+			founder2 = sample(p1.individuals[p1.individuals.age<2 & p1.individuals.sex=='M'], 1);
+			p2.takeMigrants(founder2);
+			founder3 = sample(p1.individuals[p1.individuals.age<2 & p1.individuals.sex=='F'], 1);
+			p2.takeMigrants(founder3);
+		}
+		if(sim.tag==1977){
+			founder4 = sample(p1.individuals[p1.individuals.age<2 & p1.individuals.sex=='M'], 1);
+			p2.takeMigrants(founder4);
+			founder5 = sample(p1.individuals[p1.individuals.age<2 & p1.individuals.sex=='F'], 1);
+			p2.takeMigrants(founder5);
+		}
+		if(sim.tag==1978){
+			founder6 = sample(p1.individuals[p1.individuals.age<2 & p1.individuals.sex=='F'], 1);
+			p2.takeMigrants(founder6);
+		}
+		if(sim.tag==1991){
+			founder7 = sample(p1.individuals[p1.individuals.age<5 & p1.individuals.sex=='M'], 1);
+			p2.takeMigrants(founder7);
+		}
+		if(sim.tag==1993){
+			founder8 = sample(p1.individuals[p1.individuals.age<5 & p1.individuals.sex=='M'], 1);
+			p2.takeMigrants(founder8);
+			founder9 = sample(p1.individuals[p1.individuals.age<5 & p1.individuals.sex=='F'], 1);
+			p2.takeMigrants(founder9);
+		}
+		
+                // release x birds every year 
+                if(sim.tag>=2026 & sim.tag<=2035){
+                        release = sample(p2.individuals[p2.individuals.age<5], 5);
+                        p1.takeMigrants(release);
+                }	
+	
+		Kcapt=K2;
+		
+		sim.tag=sim.tag+1;
+		
+		p2.fitnessScaling = min(Kcapt /(p2.individualCount * mean(survival)), 1.0);
+		p2.individuals.tagF = p2.individuals.fitnessScaling*p2.fitnessScaling;
+	}
+	
+	
+	//no fitness increases due to density dependence allowed
+	p1.fitnessScaling = min(K1 /(p1.individualCount * mean(survival)), 1.0);
+	
+	//use p1.individuals.tagF to keep track of population-level fitness scaling
+	//as well as fitness scaling for each individual due to age
+	//need quantity to divide out of cachedFitness to get unscaled absolute fitness for the population
+	p1.individuals.tagF = p1.individuals.fitnessScaling*p1.fitnessScaling;
+
+}
+
+
+//track statistics pre-decline every 1000 years
+1:(burnin-1) late() {
+	
+	if (sim.cycle % 1000 == 0) {
+		stats = getStats(p1, sampleSize);
+		cat(sim.cycle + "," + p1.individuals.size() + "," +  stats + "\n");
+	}
+}
+
+burnin late(){
+	//sim.outputFull("/u/home/c/ckyriazi/project-klohmuel/alala_sims/scripts/alala_burnin20k_020626.txt");
+}
+
+//after decline starts, track stats every year
+(burnin):(burnin+800) late() {
+	ss=sampleSize;
+	stats_p1 = "NA,NA,NA,NA,NA,NA";
+	if(p1.individuals.size()<sampleSize){
+		ss=p1.individuals.size();
+	}
+	if(p1.individuals.size()>0){
+		stats_p1 = getStats(p1, ss);
+	}
+	
+	stats_p2 = "NA,NA,NA,NA,NA,NA";
+	if(p2.individuals.size()>0){
+		stats_p2 = getStats(p2, p2.individuals.size());
+	}
+	
+	cat(sim.cycle + "," + p1.individuals.size() + "," +  stats_p1 + "," + p2.individuals.size() + "," + stats_p2 +"\n");
+}
+
+
+// define function to sample a population for
+// mean fitness, heterozygosity, inbreeding load (2B), mean Froh
+function (s) getStats(o pop, i sampSize)
+{
+	i = sample(pop.individuals, sampSize, F);
+	
+	m = sortBy(i.haplosomes.mutations, "position"); //get all mutations in sample
+	m_uniq = unique(m); // get rid of redundant muts
+	DAF = sapply(m_uniq, "sum(m == applyValue);"); // count number of each mut in pop
+	m_uniq_polym = m_uniq[DAF != i.haplosomes.size()]; //remove fixed mutations
+	
+	//calculate mean pop heterozygosity
+	meanHet = calcHeterozygosity(pop.haplosomes);
+	
+	// get max lethal allele frequency
+	let_muts = pop.haplosomes.mutationsOfType(m5);
+	max_let = max(sim.mutationFrequencies(pop,let_muts));
+	if(let_muts.size()>0){
+		max_let = max(sim.mutationFrequencies(pop,let_muts));
+	}
+	else{
+		max_let=0.0;
+	}
+	
+	// initialize vector for storing total ROH length for each individual
+	ROH_length_sumPerInd_1Mb = c();
+	
+	B_year = c();
+	B_gen = c();
+	
+	for (individual in i) {
+		
+		indm = sortBy(individual.haplosomes.mutations, "position");
+		indm = indm[match(indm, m_uniq_polym) >= 0];   // Check that individual mutations are not fixed 
+		indm_uniq = unique(indm);
+		
+		genotype = sapply(indm_uniq, "sum(indm == applyValue);");
+		
+		//code for getting ROHs
+		ID_het = (genotype == 1); //outputs T/F for genotypes if they are het or homDer
+		ID_homDer = (genotype == 2);
+		pos_het = indm_uniq.position[ID_het]; //outputs positions of heterozgoys genotypes
+		
+		startpos = c(0, pos_het); //adds 0 to beggining of vector of hets
+		endpos = c(pos_het, sim.chromosome.lastPosition); //adds last position in genome to vector of hets
+		pos_het_diff = endpos - startpos;
+		
+		//sum for ROHs > 1Mb
+		ROH_startpos_1Mb = startpos[pos_het_diff > 1000000]; //filter out startpos that dont correspond to ROH > 1Mb
+		ROH_endpos_1Mb = endpos[pos_het_diff > 1000000];
+		ROH_length_1Mb = pos_het_diff[pos_het_diff > 1000000]; //vector of ROHs for each individual	
+		ROH_length_sum_1Mb = sum(ROH_length_1Mb);
+		ROH_length_sumPerInd_1Mb = c(ROH_length_sumPerInd_1Mb, ROH_length_sum_1Mb); // add sum of ROHs for each individual to vector of ROHs for all individuals
+		
+		//calculate 2B (inbreeding load)
+		del_muts = c(individual.haplosomes.mutationsOfType(m1),individual.haplosomes.mutationsOfType(m2),individual.haplosomes.mutationsOfType(m3),individual.haplosomes.mutationsOfType(m4),individual.haplosomes.mutationsOfType(m5));
+		B_year_i = c();
+		B_gen_i = c();
+		
+		if (del_muts.length()>0) {
+			for(m in del_muts){
+				//check if mut is heterozygous
+				if(individual.haplosomes.mutationCountsInHaplosomes(m)==1){
+					
+					//protect against case where s < -1 (can happen with gamma DFE)
+					s = max(m.selectionCoeff,-1.0);
+					//difference in fitness between het and hom is s*(h-1) (1+sh -(1+s))
+					B_year_i = c(B_year_i, s*(m.mutationType.dominanceCoeff-1));
+					
+					age=6;
+					s_gen = 1-(1+s)^age;
+					B_gen_i = c(B_gen_i, s_gen*(m.mutationType.dominanceCoeff-1));
+				
+				}
+			}
+			B_year = c(B_year, sum(B_year_i));
+			B_gen = c(B_gen, sum(B_gen_i));
+		
+		}
+		else{
+			B_year = c(B_year, 0.0);
+			B_gen = c(B_gen, 0.0);
+		
+		}
+	}
+	
+	return(mean(pop.cachedFitness(NULL)/pop.individuals.tagF) + "," + meanHet + "," + mean(B_year) + "," + mean(-B_gen) + "," + mean(ROH_length_sumPerInd_1Mb)/seqLength) + "," + max_let;
+}
+
+
+

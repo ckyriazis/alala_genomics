@@ -1,0 +1,24 @@
+
+
+conda activate py27
+
+swHet() {
+
+SCAF_NUM=$1
+
+SCRIPT=/home/centos/USS/chris/alala/scripts/analyses/slidingWindowHet/SlidingWindowHet_alala.py
+INDIR=/home/centos/USS/chris/alala/output/data_processing/07_FilterVCFfile
+SCAF_NAME=$(cut -f1 chrom_lengths_alala.txt | head -n ${SCAF_NUM} | tail -n 1 )
+VCF=${INDIR}/175AL_FilterB_Round1_chrom${SCAF_NUM}.vcf.gz
+
+python ${SCRIPT} ${VCF} 1000000 1000000 ${SCAF_NAME}
+
+mv ${INDIR}/175AL_FilterB_Round1_chrom${SCAF_NUM}.vcf.gz_het_1000000win_1000000step.txt /home/centos/USS/chris/alala/output/analyses/slidingWindowHet
+
+}
+
+
+export -f swHet
+
+seq 43 | parallel -j 16 swHet
+

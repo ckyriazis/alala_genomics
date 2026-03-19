@@ -1,0 +1,29 @@
+
+conda activate sambamba
+
+
+markDups_flagstat() {
+PREFIX=$1
+
+BAMDIR=/home/centos/USS/chris/alala/output/data_processing/02_bwamem
+OUTDIR=/home/centos/USS/chris/alala/output/data_processing/03_markDups
+
+
+sambamba flagstat ${BAMDIR}/${PREFIX}_bwamem.bam > ${BAMDIR}/${PREFIX}_flagstat.txt
+
+sambamba markdup ${BAMDIR}/${PREFIX}_bwamem.bam ${OUTDIR}/${PREFIX}_markDup.bam --tmpdir=${OUTDIR}
+
+wait
+
+sambamba sort ${OUTDIR}/${PREFIX}_markDup.bam -m 12G --tmpdir=${OUTDIR}
+
+}
+
+#export the function
+export -f markDups_flagstat
+
+cat /home/centos/USS/chris/alala/scripts/data_processing/03_markDups/alala.txt | parallel -j 24 markDups_flagstat
+
+
+
+

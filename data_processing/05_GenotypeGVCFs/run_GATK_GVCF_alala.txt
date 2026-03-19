@@ -1,0 +1,210 @@
+conda activate java8
+
+
+
+GATK_genotypeGVCFs() {
+
+SCAFFOLD=$1
+
+INDIR=/home/centos/USS/chris/alala/output/data_processing/04_GATKHC
+OUTDIR=/home/centos/USS/chris/alala/output/data_processing/05_GenotypeGVCFs
+
+BED=/home/centos/USS/chris/alala/reference_genome/scaffold_files/scaffold_${SCAFFOLD}.bed
+
+
+java -Djava.io.tmpdir=/home/centos/USS/chris/alala/scripts/data_processing/05_GenotypeGVCFs/tmp \
+-jar ~/USS/conservation-genetics/nwr/bin/GenomeAnalysisTK.jar \
+-T GenotypeGVCFs \
+-R /home/centos/USS/chris/alala/reference_genome/GCF_020740725.1_bCorHaw1.pri.cur_genomic.fna \
+-allSites \
+-stand_call_conf 0 \
+-L ${BED} \
+-V ${INDIR}/AL101.g.vcf.gz \
+-V ${INDIR}/AL102.g.vcf.gz \
+-V ${INDIR}/AL103.g.vcf.gz \
+-V ${INDIR}/AL114.g.vcf.gz \
+-V ${INDIR}/AL119.g.vcf.gz \
+-V ${INDIR}/AL120.g.vcf.gz \
+-V ${INDIR}/AL121.g.vcf.gz \
+-V ${INDIR}/AL124.g.vcf.gz \
+-V ${INDIR}/AL125.g.vcf.gz \
+-V ${INDIR}/AL127.g.vcf.gz \
+-V ${INDIR}/AL129.g.vcf.gz \
+-V ${INDIR}/AL133.g.vcf.gz \
+-V ${INDIR}/AL134.g.vcf.gz \
+-V ${INDIR}/AL137.g.vcf.gz \
+-V ${INDIR}/AL138.g.vcf.gz \
+-V ${INDIR}/AL141.g.vcf.gz \
+-V ${INDIR}/AL142.g.vcf.gz \
+-V ${INDIR}/AL143.g.vcf.gz \
+-V ${INDIR}/AL146.g.vcf.gz \
+-V ${INDIR}/AL149.g.vcf.gz \
+-V ${INDIR}/AL153.g.vcf.gz \
+-V ${INDIR}/AL155.g.vcf.gz \
+-V ${INDIR}/AL156.g.vcf.gz \
+-V ${INDIR}/AL159.g.vcf.gz \
+-V ${INDIR}/AL160.g.vcf.gz \
+-V ${INDIR}/AL162.g.vcf.gz \
+-V ${INDIR}/AL166.g.vcf.gz \
+-V ${INDIR}/AL170.g.vcf.gz \
+-V ${INDIR}/AL173.g.vcf.gz \
+-V ${INDIR}/AL174.g.vcf.gz \
+-V ${INDIR}/AL175.g.vcf.gz \
+-V ${INDIR}/AL176.g.vcf.gz \
+-V ${INDIR}/AL177.g.vcf.gz \
+-V ${INDIR}/AL178.g.vcf.gz \
+-V ${INDIR}/AL180.g.vcf.gz \
+-V ${INDIR}/AL181.g.vcf.gz \
+-V ${INDIR}/AL182.g.vcf.gz \
+-V ${INDIR}/AL184.g.vcf.gz \
+-V ${INDIR}/AL185.g.vcf.gz \
+-V ${INDIR}/AL187.g.vcf.gz \
+-V ${INDIR}/AL189.g.vcf.gz \
+-V ${INDIR}/AL193.g.vcf.gz \
+-V ${INDIR}/AL196.g.vcf.gz \
+-V ${INDIR}/AL197.g.vcf.gz \
+-V ${INDIR}/AL199.g.vcf.gz \
+-V ${INDIR}/AL200.g.vcf.gz \
+-V ${INDIR}/AL201.g.vcf.gz \
+-V ${INDIR}/AL204.g.vcf.gz \
+-V ${INDIR}/AL207.g.vcf.gz \
+-V ${INDIR}/AL208.g.vcf.gz \
+-V ${INDIR}/AL209.g.vcf.gz \
+-V ${INDIR}/AL210.g.vcf.gz \
+-V ${INDIR}/AL213.g.vcf.gz \
+-V ${INDIR}/AL215.g.vcf.gz \
+-V ${INDIR}/AL216.g.vcf.gz \
+-V ${INDIR}/AL220.g.vcf.gz \
+-V ${INDIR}/AL223.g.vcf.gz \
+-V ${INDIR}/AL231.g.vcf.gz \
+-V ${INDIR}/AL238.g.vcf.gz \
+-V ${INDIR}/AL241.g.vcf.gz \
+-V ${INDIR}/AL242.g.vcf.gz \
+-V ${INDIR}/AL243.g.vcf.gz \
+-V ${INDIR}/AL244.g.vcf.gz \
+-V ${INDIR}/AL246.g.vcf.gz \
+-V ${INDIR}/AL254.g.vcf.gz \
+-V ${INDIR}/AL255.g.vcf.gz \
+-V ${INDIR}/AL256.g.vcf.gz \
+-V ${INDIR}/AL263.g.vcf.gz \
+-V ${INDIR}/AL266.g.vcf.gz \
+-V ${INDIR}/AL269.g.vcf.gz \
+-V ${INDIR}/AL272.g.vcf.gz \
+-V ${INDIR}/AL273.g.vcf.gz \
+-V ${INDIR}/AL274.g.vcf.gz \
+-V ${INDIR}/AL276.g.vcf.gz \
+-V ${INDIR}/AL278.g.vcf.gz \
+-V ${INDIR}/AL279.g.vcf.gz \
+-V ${INDIR}/AL283.g.vcf.gz \
+-V ${INDIR}/AL284.g.vcf.gz \
+-V ${INDIR}/AL288.g.vcf.gz \
+-V ${INDIR}/AL292.g.vcf.gz \
+-V ${INDIR}/AL300.g.vcf.gz \
+-V ${INDIR}/AL303.g.vcf.gz \
+-V ${INDIR}/AL304.g.vcf.gz \
+-V ${INDIR}/AL307.g.vcf.gz \
+-V ${INDIR}/AL309.g.vcf.gz \
+-V ${INDIR}/AL313.g.vcf.gz \
+-V ${INDIR}/AL32.g.vcf.gz \
+-V ${INDIR}/AL35.g.vcf.gz \
+-V ${INDIR}/AL75.g.vcf.gz \
+-V ${INDIR}/AL82.g.vcf.gz \
+-V ${INDIR}/AL86.g.vcf.gz \
+-V ${INDIR}/AL88.g.vcf.gz \
+-V ${INDIR}/AL91.g.vcf.gz \
+-V ${INDIR}/AL92.g.vcf.gz \
+-V ${INDIR}/AL95.g.vcf.gz \
+-V ${INDIR}/AL97.g.vcf.gz \
+-V ${INDIR}/AL99.g.vcf.gz \
+-V ${INDIR}/K1423.g.vcf.gz \
+-V ${INDIR}/K1461.g.vcf.gz \
+-V ${INDIR}/K1542.g.vcf.gz \
+-V ${INDIR}/K1544.g.vcf.gz \
+-V ${INDIR}/K1567.g.vcf.gz \
+-V ${INDIR}/K1579.g.vcf.gz \
+-V ${INDIR}/K1580.g.vcf.gz \
+-V ${INDIR}/K1583.g.vcf.gz \
+-V ${INDIR}/K1603.g.vcf.gz \
+-V ${INDIR}/K1606.g.vcf.gz \
+-V ${INDIR}/K1608.g.vcf.gz \
+-V ${INDIR}/K16100.g.vcf.gz \
+-V ${INDIR}/K1614.g.vcf.gz \
+-V ${INDIR}/K1617.g.vcf.gz \
+-V ${INDIR}/K1618.g.vcf.gz \
+-V ${INDIR}/K1623.g.vcf.gz \
+-V ${INDIR}/K1627.g.vcf.gz \
+-V ${INDIR}/K1632.g.vcf.gz \
+-V ${INDIR}/K1640.g.vcf.gz \
+-V ${INDIR}/K1650.g.vcf.gz \
+-V ${INDIR}/K1660.g.vcf.gz \
+-V ${INDIR}/K1663.g.vcf.gz \
+-V ${INDIR}/K1665.g.vcf.gz \
+-V ${INDIR}/K1669.g.vcf.gz \
+-V ${INDIR}/K1672.g.vcf.gz \
+-V ${INDIR}/K1680.g.vcf.gz \
+-V ${INDIR}/K1684.g.vcf.gz \
+-V ${INDIR}/K1693.g.vcf.gz \
+-V ${INDIR}/K1696.g.vcf.gz \
+-V ${INDIR}/K17007.g.vcf.gz \
+-V ${INDIR}/K17008.g.vcf.gz \
+-V ${INDIR}/K17010.g.vcf.gz \
+-V ${INDIR}/K17013.g.vcf.gz \
+-V ${INDIR}/K17014.g.vcf.gz \
+-V ${INDIR}/K17025.g.vcf.gz \
+-V ${INDIR}/K17028.g.vcf.gz \
+-V ${INDIR}/K17030.g.vcf.gz \
+-V ${INDIR}/K17032.g.vcf.gz \
+-V ${INDIR}/K17033.g.vcf.gz \
+-V ${INDIR}/K17034.g.vcf.gz \
+-V ${INDIR}/K17035.g.vcf.gz \
+-V ${INDIR}/K17037.g.vcf.gz \
+-V ${INDIR}/K17040.g.vcf.gz \
+-V ${INDIR}/K17042.g.vcf.gz \
+-V ${INDIR}/K17044.g.vcf.gz \
+-V ${INDIR}/K17045.g.vcf.gz \
+-V ${INDIR}/K17048.g.vcf.gz \
+-V ${INDIR}/K17052.g.vcf.gz \
+-V ${INDIR}/K17053.g.vcf.gz \
+-V ${INDIR}/K17056.g.vcf.gz \
+-V ${INDIR}/K17062.g.vcf.gz \
+-V ${INDIR}/K17064.g.vcf.gz \
+-V ${INDIR}/K17073.g.vcf.gz \
+-V ${INDIR}/K17077.g.vcf.gz \
+-V ${INDIR}/K17078.g.vcf.gz \
+-V ${INDIR}/K17081.g.vcf.gz \
+-V ${INDIR}/K17083.g.vcf.gz \
+-V ${INDIR}/K17087.g.vcf.gz \
+-V ${INDIR}/K17091.g.vcf.gz \
+-V ${INDIR}/K17094.g.vcf.gz \
+-V ${INDIR}/K17098.g.vcf.gz \
+-V ${INDIR}/K17099.g.vcf.gz \
+-V ${INDIR}/K17101.g.vcf.gz \
+-V ${INDIR}/K17102.g.vcf.gz \
+-V ${INDIR}/K17103.g.vcf.gz \
+-V ${INDIR}/K17104.g.vcf.gz \
+-V ${INDIR}/K17106.g.vcf.gz \
+-V ${INDIR}/K18010.g.vcf.gz \
+-V ${INDIR}/K18017.g.vcf.gz \
+-V ${INDIR}/K18019.g.vcf.gz \
+-V ${INDIR}/K18022.g.vcf.gz \
+-V ${INDIR}/K18034.g.vcf.gz \
+-V ${INDIR}/K18078.g.vcf.gz \
+-V ${INDIR}/K18083.g.vcf.gz \
+-V ${INDIR}/K18084.g.vcf.gz \
+-V ${INDIR}/K18091.g.vcf.gz \
+-V ${INDIR}/K19018.g.vcf.gz \
+-V ${INDIR}/K19019.g.vcf.gz \
+-o ${OUTDIR}/175AL_noFilter_scaff${SCAFFOLD}.vcf.gz >& /home/centos/USS/chris/alala/scripts/data_processing/05_GenotypeGVCFs/logfiles/scaffold_${SCAFFOLD}'_gvcf.out'
+
+
+}
+
+#export the function
+export -f GATK_genotypeGVCFs
+
+seq 43 | parallel -j 22 GATK_genotypeGVCFs
+
+
+
+
+

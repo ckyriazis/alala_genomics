@@ -1,0 +1,32 @@
+conda activate java8
+
+
+
+GATKHC() {
+
+PREFIX=$1
+
+BAMDIR=/home/centos/USS/chris/alala/output/data_processing/03_markDups
+OUTDIR=/home/centos/USS/chris/alala/output/data_processing/04_GATKHC
+
+java -jar ~/USS/conservation-genetics/nwr/bin/GenomeAnalysisTK.jar \
+-T HaplotypeCaller \
+-R /home/centos/USS/chris/alala/reference_genome/GCF_020740725.1_bCorHaw1.pri.cur_genomic.fna \
+-ERC BP_RESOLUTION \
+-mbq 20 \
+-out_mode EMIT_ALL_SITES \
+-I ${BAMDIR}/${PREFIX}_markDup.sorted.bam \
+-o ${OUTDIR}/${PREFIX}'.g.vcf.gz' -nct 4 >& /home/centos/USS/chris/alala/scripts/data_processing/04_GATKHC/logfiles/${PREFIX}'_gvcf.out'
+
+
+}
+
+#export the function
+export -f GATKHC
+
+cat /home/centos/USS/chris/alala/scripts/data_processing/04_GATKHC/alala.txt | parallel -j 12 GATKHC
+
+
+
+
+
