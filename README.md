@@ -1,1 +1,1 @@
-Scripts associated with Kyriazis et al. 2026 "Elevated recessive lethal frequencies drive hatch failure following near extinction in ‘Alalā, the Hawaiian crow"
+Scripts associated with Kyriazis et al. 2026 "Elevated recessive lethal frequencies drive hatch failure following near extinction in ‘Alalā, the Hawaiian crow" https://doi.org/10.64898/2026.03.24.713968
