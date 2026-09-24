@@ -2,134 +2,91 @@
 library(dplyr)
 library(ggplot2)
 library(patchwork)
+library(logistf)
+library(tidyverse)
 
-ROH_data <- read.csv("~/Documents/SDZWA/alala_genomics/analysis/ROH/alala_medata.csv")
-repro_data <-  read.csv("~/Documents/SDZWA/alala_genomics/analysis/ROH/alala_repro_history_summary_2025.09.23.csv")
+ROH_data <- read.csv("~/Documents/SDZWA/alala_genomics/analysis/ROH/data/alala_medata.csv")
+repro_data <-  read.csv("~/Documents/SDZWA/alala_genomics/analysis/ROH/data/alala_repro_history_summary_2025.09.23.csv")
 data_merged <- merge(ROH_data, repro_data, by="Sample")
 
+ROH_data_adults <- ROH_data[ROH_data$lifespan>0 & ROH_data$hatch_year > 2012,]
 
-indiv_summary <- data_merged %>%
-  group_by(Sample) %>%
-  summarise(
-    # opportunity
-    N_years = n(),                               # how many breeding seasons observed
-    Opp_years = sum(MatesPerYr > 0, na.rm = TRUE),             # years given a mate
-    
-    # raw outputs
-    Egg_years = sum(EggLaid, na.rm = TRUE),
-    Fertile_years = sum(FertileEggConfirmed, na.rm = TRUE),
-    Hatch_years = sum(EggHatched, na.rm = TRUE),
-    
-    # rates conditional on opportunity
-    EggRate = Egg_years / Opp_years,
-    FertileRate = Fertile_years / Opp_years,
-    HatchRate = Hatch_years / Opp_years, 
-    HatchRateCond = Hatch_years /Egg_years,
-    FROH_1Mb = mean(FROH_1Mb),
-    FROH_10Mb = mean(FROH_10Mb),
-    hatch_year = mean(hatch_year), 
-    sex = Sex[1],
-    
-    carrier_DLG1 = sum(DLG1, na.rm = TRUE) / N_years,
-    carrier_NEO1 = sum(NEO1, na.rm = TRUE) / N_years,
-    carrier_all = sum(DLG1 + NEO1, na.rm = TRUE) / N_years
+
+library(patchwork)
+
+dat <- ROH_data_adults %>%
+  mutate(
+    offspring_per_year = Total.no..of.nestlings / (lifespan / 365.25),
+    DLG1_carrier = case_when(
+      DLG1 == 0 ~ "Non-carrier",
+      DLG1 %in% c(1, 2) ~ "Carrier",
+      TRUE ~ NA_character_
+    ),
+    NEO1_carrier = case_when(
+      NEO1 == 0 ~ "Non-carrier",
+      NEO1 %in% c(1, 2) ~ "Carrier",
+      TRUE ~ NA_character_
+    )
   )
-indiv_summary
-dim(indiv_summary)
 
 
-indiv_summary_subset <- indiv_summary[indiv_summary$Opp_years>0 ,]
-indiv_summary_subset_2012 <- indiv_summary[indiv_summary$Opp_years>0 & indiv_summary$hatch_year>2012 ,]
-
-dim(indiv_summary_subset)
+wilcox.test(offspring_per_year ~ DLG1_carrier, data = dat)
+wilcox.test(offspring_per_year ~ NEO1_carrier, data = dat)
 
 
-carrier2 <- indiv_summary_subset[indiv_summary_subset$carrier_all==2,]
-carrier1 <- indiv_summary_subset[indiv_summary_subset$carrier_all==1,]
-carrier0 <- indiv_summary_subset[indiv_summary_subset$carrier_all==0,]
+dat %>%
+  group_by(DLG1_carrier) %>%
+  summarise(mean_offspring_per_year = mean(offspring_per_year, na.rm = TRUE))
 
-### annual egg hatch rates by carrier status
-mean(carrier2$HatchRate)
-mean(carrier1$HatchRate)
-mean(carrier0$HatchRate)
-
-### conditional rates
-mean(carrier2$HatchRate)/mean(carrier2$EggRate)
-mean(carrier1$HatchRate)/mean(carrier1$EggRate)
-mean(carrier0$HatchRate)/mean(carrier0$EggRate)
+dat %>%
+  group_by(NEO1_carrier) %>%
+  summarise(mean_offspring_per_year = mean(offspring_per_year, na.rm = TRUE))
 
 
+dat_subset <- dat %>% filter(!is.na(DLG1_carrier))
+dim(dat_subset)
 
-### plot only annual egg hatch rate 
-plot <- ggplot(indiv_summary_subset_2012, 
-             aes(x = factor(carrier_all), y = HatchRate, fill = factor(carrier_all))) +
-  geom_boxplot(outlier.shape = NA, alpha = 0.7) +
-  geom_jitter(width = 0.15, alpha = 0.6, size = 1.8) +
-  labs(x = "Recessive lethal carrier status", y = "Average annual hatch rate") +
-  theme_minimal(base_size = 14) +
-  theme(legend.position = "none") + 
-  coord_cartesian(ylim = c(0, 0.7))
-plot
+dat_subset <- dat %>% filter(!is.na(NEO1_carrier))
+dim(dat_subset)
 
+table(dat$DLG1)
+table(dat$NEO1)
 
-ggsave("~/Documents/SDZWA/alala_genomics/analysis/GWAS/Plots/carrier_hatch_rate_2012.pdf",
-       plot, width = 4, height = 4)
+# Create labeled x variables with sample sizes
+dlg1_labels <- dat %>%
+  filter(!is.na(DLG1_carrier)) %>%
+  count(DLG1_carrier) %>%
+  mutate(label = paste0(DLG1_carrier, "\n(n=", n, ")"))
 
+neo1_labels <- dat %>%
+  filter(!is.na(NEO1_carrier)) %>%
+  count(NEO1_carrier) %>%
+  mutate(label = paste0(NEO1_carrier, "\n(n=", n, ")"))
 
+dat <- dat %>%
+  left_join(dlg1_labels %>% select(DLG1_carrier, DLG1_label = label), by = "DLG1_carrier") %>%
+  left_join(neo1_labels %>% select(NEO1_carrier, NEO1_label = label), by = "NEO1_carrier")
 
+p1 <- ggplot(dat %>% filter(!is.na(DLG1_carrier)), 
+             aes(x = DLG1_label, y = offspring_per_year)) +
+  geom_violin(fill = "orange3") +
+  geom_dotplot(binaxis = "y", stackdir = "center", dotsize = 0.6, fill = "gray40", color = "gray40") +
+  stat_summary(fun = mean, geom = "crossbar", width = 0.4, color = "black") +
+  labs(x = "DLG1", y = "Offspring per year") +
+  theme_classic()
 
+p2 <- ggplot(dat %>% filter(!is.na(NEO1_carrier)), 
+             aes(x = NEO1_label, y = offspring_per_year)) +
+  geom_violin(fill = "orange3") +
+  geom_dotplot(binaxis = "y", stackdir = "center", dotsize = 0.6, fill = "gray40", color = "gray40") +
+  stat_summary(fun = mean, geom = "crossbar", width = 0.4, color = "black") +
+  labs(x = "NEO1", y = "Offspring per year") +
+  theme_classic()
 
+p1 + p2
 
-### plot egg rate and conditional hatch rate for subset and all data
-
-p1 <- ggplot(indiv_summary_subset, 
-             aes(x = factor(carrier_all), y = EggRate, fill = factor(carrier_all))) +
-  geom_boxplot(outlier.shape = NA, alpha = 0.7) +
-  geom_jitter(width = 0.15, alpha = 0.6, size = 1.8) +
-  labs(x = "Recessive lethal carrier status", y = "Egg laying rate") +
-  theme_minimal(base_size = 14) +
-  theme(legend.position = "none") + 
-  coord_cartesian(ylim = c(0, 1))+
-  ggtitle("All individuals (n=84)")
-
-p2 <- ggplot(indiv_summary_subset, 
-               aes(x = factor(carrier_all), y = HatchRateCond, fill = factor(carrier_all))) +
-  geom_boxplot(outlier.shape = NA, alpha = 0.7) +
-  geom_jitter(width = 0.15, alpha = 0.6, size = 1.8) +
-  labs(x = "Recessive lethal carrier status", y = "Conditional hatch rate") +
-  theme_minimal(base_size = 14) +
-  theme(legend.position = "none") + 
-  coord_cartesian(ylim = c(0, 1))+
-  ggtitle("All individuals (n=84)")
-
-p3 <- ggplot(indiv_summary_subset_2012, 
-             aes(x = factor(carrier_all), y = EggRate, fill = factor(carrier_all))) +
-  geom_boxplot(outlier.shape = NA, alpha = 0.7) +
-  geom_jitter(width = 0.15, alpha = 0.6, size = 1.8) +
-  labs(x = "Recessive lethal carrier status", y = "Egg laying rate") +
-  theme_minimal(base_size = 14) +
-  theme(legend.position = "none") + 
-  coord_cartesian(ylim = c(0, 1))+
-  ggtitle("Post-2012 individuals (n=25)")
-
-### plot only annual egg hatch rate 
-p4 <- ggplot(indiv_summary_subset_2012, 
-             aes(x = factor(carrier_all), y = HatchRateCond, fill = factor(carrier_all))) +
-  geom_boxplot(outlier.shape = NA, alpha = 0.7) +
-  geom_jitter(width = 0.15, alpha = 0.6, size = 1.8) +
-  labs(x = "Recessive lethal carrier status", y = "Conditional hatch rate") +
-  theme_minimal(base_size = 14) +
-  theme(legend.position = "none") + 
-  coord_cartesian(ylim = c(0, 1)) + 
-  ggtitle("Post-2012 individuals (n=25)")
+ggsave("~/Documents/SDZWA/alala_genomics/analysis/GWAS/Plots/carriers_plot_2012.pdf", p1 + p2, width = 7, height = 3)
 
 
-final_fig <- (p1 + p2) / (p3 + p4)
-final_fig
-
-
-
-ggsave("~/Documents/SDZWA/alala_genomics/analysis/GWAS/Plots/carrier_hatch_egg_rate_all.pdf",
-       final_fig, width = 8, height = 7)
 
 

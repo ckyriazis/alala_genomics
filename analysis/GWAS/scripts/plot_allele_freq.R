@@ -9,7 +9,7 @@ library(binom)
 #------------------------------------------------------------
 # LOAD DATA
 #------------------------------------------------------------
-df <- fread("~/Documents/SDZWA/alala_genomics/analysis/ROH/alala_medata.csv")
+df <- fread("~/Documents/SDZWA/alala_genomics/analysis/ROH/data/alala_medata.csv")
 df <- df %>% filter(grepl("AL", Sample))
 
 # Parse dates
